@@ -5,6 +5,10 @@ macro_rules! set_jump_raw {
     ($buf_ptr:expr, $func:expr, $lander:block) => {
         core::arch::asm!(
             "adr lr, {lander}",
+            #[cfg(target_feature = "thumb-mode")]
+            "mov r12, sp
+            stm r0, {{r0, r6, r7, r12, lr}}",
+            #[cfg(not(target_feature = "thumb-mode"))]
             "stm r0, {{r0, r6, r11, sp, lr}}",
             "bl {func}",
 
@@ -16,11 +20,13 @@ macro_rules! set_jump_raw {
             lateout("r4") _,
             lateout("r5") _,
             // lateout("r6") _, // LLVM reserved.
-            lateout("r7") _,
+            #[cfg(not(target_feature = "thumb-mode"))]
+            lateout("r7") _, // frame pointer for thumb
             lateout("r8") _,
             lateout("r9") _,
             lateout("r10") _,
-            // lateout("r11") _, // LLVM reserved.
+            #[cfg(target_feature = "thumb-mode")]
+            lateout("r11") _, // LLVM reserved (non-thumb).
             lateout("r12") _,
             // lateout("sp") _, // sp
             lateout("lr") _,
@@ -36,6 +42,10 @@ pub(crate) unsafe fn long_jump_raw(buf: *mut (), data: usize) -> ! {
     unsafe {
         core::arch::asm!(
             "str r0, [r1]",
+            #[cfg(target_feature = "thumb-mode")]
+            "stm r0, {{r0, r6, r7, r12, lr}}
+            mov sp, r12",
+            #[cfg(not(target_feature = "thumb-mode"))]
             "ldm r1, {{r0, r6, r11, sp, pc}}",
             in("r0") data,
             in("r1") buf,
