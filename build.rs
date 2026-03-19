@@ -2,7 +2,7 @@
 fn main() {
     println!("cargo::rustc-check-cfg=cfg(emit_cfi)");
     let emit_cfi = std::env::var("CARGO_CFG_WINDOWS").is_err()
-        && !matches!(std::env::var("CARGO_CFG_PANIC"), Ok(v) if v == "abort");
+        && matches!(std::env::var("CARGO_CFG_PANIC"), Ok(v) if v == "unwind");
     if emit_cfi {
         println!("cargo::rustc-cfg=emit_cfi");
     }
